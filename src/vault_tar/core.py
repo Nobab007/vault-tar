@@ -30,17 +30,17 @@ Examples
 --------
 Encrypt directories::
 
-    $ python vault.py encrypt -i docs/ photos/ -o vault -v
-    $ python vault.py encrypt -i docs/ -o vault --algorithm zst -v
+    $ vtar encrypt -i docs/ photos/ -o vault -v
+    $ vtar encrypt -i docs/ -o vault --algorithm zst -v
 
 Encrypt a single file (skip archiving)::
 
-    $ python vault.py encrypt -i backup.sql -o backup.enc --file-only --no-split
+    $ vtar encrypt -i backup.sql -o backup.enc --file-only --no-split
 
 Decrypt::
 
-    $ python vault.py decrypt -i vault -o restored/ -v
-    $ python vault.py decrypt -i backup.enc -o backup.sql --file-only
+    $ vtar decrypt -i vault -o restored/ -v
+    $ vtar decrypt -i backup.enc -o backup.sql --file-only
 """
 
 from __future__ import annotations
@@ -943,8 +943,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="Show progress bars and status messages.",
     )
 
+    from vault_tar import __version__
+
     parser = argparse.ArgumentParser(
-        prog="vault",
+        prog="vtar",
         description=(
             "Encrypt and decrypt files or directories using AES-256-GCM "
             "with PBKDF2-HMAC-SHA256 key derivation."
@@ -952,13 +954,17 @@ def build_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "examples:\n"
-            "  %(prog)s encrypt -i secret_docs/ -o vault -v\n"
+            "  %(prog)s encrypt -i secret_docs/ -o encrypted -v\n"
             "  %(prog)s encrypt -i data.bin -o data.enc --file-only --no-split\n"
             "  %(prog)s encrypt -i photos/ -o photos --algorithm zst -v\n"
-            "  %(prog)s decrypt -i vault -o restored/ -v\n"
+            "  %(prog)s decrypt -i encrypted -o restored/ -v\n"
             "  %(prog)s decrypt -i data.enc -o data.bin --file-only\n"
             "  %(prog)s compare original/ restored/ -v\n"
         ),
+    )
+    parser.add_argument(
+        "-V", "--version", action="version",
+        version=f"%(prog)s {__version__}",
     )
     sub = parser.add_subparsers(dest="command", required=True)
 

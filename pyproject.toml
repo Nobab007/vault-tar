@@ -3,36 +3,46 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "vault"
+name = "vault-tar"
 version = "0.1.0"
 dependencies = [
-    "cryptography"
+    "cryptography>=43.0",
 ]
-requires-python = ">=3.14"
+requires-python = ">=3.12"
 authors = [
   {name = "Volodymyr Horshenin"}
 ]
-description = ""
+description = "AES-256-GCM file and directory encryption with chunked streaming and optional splitting."
 readme = "README.md"
 license = "MIT"
 license-files = [
     "LICEN[CS]E*",
-    "src/vault/vendor/licenses/*.txt",
 ]
 keywords = [
+    "encryption", "aes", "aes-256-gcm", "cryptography", "file-encryption",
+    "directory-encryption", "pbkdf2", "security", "privacy",
 ]
 classifiers = [
-  "Development Status :: 4 - Beta",
-
-  "Intended Audience :: End Users/Desktop",
-  "Topic :: Utilities",
-  "Environment :: Console",
-
-  "Programming Language :: Python :: 3.14",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: Developers",
+    "Topic :: Security :: Cryptography",
+    "Topic :: System :: Archiving",
+    "Topic :: Utilities",
+    "Environment :: Console",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Typing :: Typed",
 ]
 
 [project.urls]
-Repository = "https://github.com/l1asis/vault.git"
-Issues = "https://github.com/l1asis/vault/issues"
+Homepage = "https://github.com/l1asis/vault-tar"
+Repository = "https://github.com/l1asis/vault-tar.git"
+Issues = "https://github.com/l1asis/vault-tar/issues"
 
 [project.scripts]
+vtar = "vault_tar.core:main"
