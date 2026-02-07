@@ -102,7 +102,13 @@ class TestPathTraversal:
         "evil_name",
         [
             "../../../etc/passwd",
-            "..\\..\\Windows\\System32\\evil.dll",
+            pytest.param(
+                "..\\..\\Windows\\System32\\evil.dll",
+                marks=pytest.mark.skipif(
+                    sys.platform != "win32",
+                    reason="Backslash is not a path separator on POSIX",
+                ),
+            ),
             "normal/../../../escape",
         ],
         ids=["unix-traversal", "windows-traversal", "nested-traversal"],
