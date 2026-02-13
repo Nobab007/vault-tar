@@ -53,6 +53,7 @@ import re
 import shutil
 import sys
 import tarfile
+import time
 from getpass import getpass
 from secrets import token_bytes
 from typing import BinaryIO, Callable, Iterator, Literal
@@ -341,8 +342,19 @@ class _SplitFileReader:
 
 # ── Progress reporting ───────────────────────────────────────────────────────
 
-def _format_size(size_bytes: int | float) -> str:
-    """Format *size_bytes* with an appropriate binary unit (B … TiB)."""
+def _format_size(size_bytes: int | float, *, decimal: bool = False) -> str:
+    """Format *size_bytes* with an appropriate unit.
+
+    When *decimal* is ``False`` (default), uses binary units
+    (KiB, MiB, …, base-1024).  When ``True``, uses SI decimal units
+    (KB, MB, …, base-1000).
+    """
+    if decimal:
+        for unit in ("B", "KB", "MB", "GB", "TB"):
+            if abs(size_bytes) < 1000:
+                return f"{size_bytes:.1f} {unit}" if unit != "B" else f"{int(size_bytes)} B"
+            size_bytes /= 1000
+        return f"{size_bytes:.1f} PB"
     for unit in ("B", "KiB", "MiB", "GiB", "TiB"):
         if abs(size_bytes) < 1024:
             return f"{size_bytes:.1f} {unit}" if unit != "B" else f"{int(size_bytes)} B"
@@ -356,11 +368,15 @@ def _progress_bar(
     label: str,
     *,
     unit: str | None = None,
+    start_time: float | None = None,
 ) -> None:
-    """Print ``label: |████░░░░| pct% (cur/tot)`` to stderr.
+    """Print ``label: |████░░░░| pct% (cur/tot) speed`` to stderr.
 
     *unit* can be ``"bytes"`` (auto-scaled), ``"items"``, or ``None``
     (auto-detect: uses bytes if *total* > 1024, otherwise items).
+
+    When *start_time* (a :func:`time.monotonic` timestamp) is provided,
+    the current throughput is appended to the line.
     """
     if total <= 0:
         return
@@ -372,13 +388,23 @@ def _progress_bar(
     filled = int(width * current // total)
     bar = "█" * filled + "░" * (width - filled)
 
+    speed = ""
+    if start_time is not None:
+        elapsed = time.monotonic() - start_time
+        if elapsed > 0:
+            rate = current / elapsed
+            if unit == "bytes":
+                speed = f" {_format_size(rate)}/s"
+            else:
+                speed = f" {rate:.1f} {unit}/s"
+
     if unit == "bytes":
         suffix = f"{_format_size(current)}/{_format_size(total)}"
     else:
         suffix = f"{current}/{total} {unit}"
 
     print(
-        f"\r{label}: |{bar}| {pct:5.1f}% ({suffix})",
+        f"\r{label}: |{bar}| {pct:5.1f}% ({suffix}){speed}\033[K",
         end="",
         flush=True,
         file=sys.stderr,
@@ -500,12 +526,13 @@ def compress_directories(
 
     entries, total_bytes = _collect_entries(*input_paths)
     processed_bytes = 0
+    t0 = time.monotonic()
 
     def _on_bytes(n: int) -> None:
         nonlocal processed_bytes
         processed_bytes += n
         if verbose:
-            _progress_bar(processed_bytes, total_bytes, "Compressing")
+            _progress_bar(processed_bytes, total_bytes, "Compressing", start_time=t0)
 
     kwargs = _compression_kwargs(algorithm, compression_level)
     mode = _ALGO_WRITE_MODE[algorithm]
@@ -609,6 +636,7 @@ def encrypt_file(
 
     total = os.path.getsize(input_filename)
     processed = 0
+    t0 = time.monotonic()
 
     with _SplitFileWriter(output_filename, split_size) as writer:
         writer.write_header(salt, base_nonce)
@@ -624,7 +652,7 @@ def encrypt_file(
                 idx += 1
                 processed += len(data)
                 if verbose:
-                    _progress_bar(processed, total, "Encrypting")
+                    _progress_bar(processed, total, "Encrypting", start_time=t0)
 
     if verbose:
         print(file=sys.stderr)
@@ -720,6 +748,7 @@ def decrypt_file(
         key = derive_key(password, salt)
         aesgcm = AESGCM(key)
         total = reader.total_size
+        t0 = time.monotonic()
 
         try:
             with open(output_filename, "wb") as out:
@@ -735,7 +764,7 @@ def decrypt_file(
                         ) from exc
                     out.write(plaintext)
                     if verbose:
-                        _progress_bar(reader.bytes_read, total, "Decrypting")
+                        _progress_bar(reader.bytes_read, total, "Decrypting", start_time=t0)
         except Exception:
             # Remove partial output on failure
             if os.path.isfile(output_filename):
