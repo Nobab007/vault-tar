@@ -362,6 +362,19 @@ def _format_size(size_bytes: int | float, *, decimal: bool = False) -> str:
     return f"{size_bytes:.1f} PiB"
 
 
+def _format_eta(seconds: float) -> str:
+    """Format *seconds* into a human-readable ETA string (``mm:ss`` or ``h:mm:ss``)."""
+    if seconds < 0 or seconds != seconds:  # NaN check without math import
+        return "??:??"
+    total_secs = int(seconds)
+    if total_secs < 3600:
+        return f"{total_secs // 60:02d}:{total_secs % 60:02d}"
+    hours = total_secs // 3600
+    minutes = (total_secs % 3600) // 60
+    secs = total_secs % 60
+    return f"{hours}:{minutes:02d}:{secs:02d}"
+
+
 def _progress_bar(
     current: int,
     total: int,
@@ -370,13 +383,17 @@ def _progress_bar(
     unit: str | None = None,
     start_time: float | None = None,
 ) -> None:
-    """Print ``label: |████░░░░| pct% (cur/tot) speed`` to stderr.
+    """Print ``label: |████░░░░| pct% (cur/tot) speed ETA`` to stderr.
 
     *unit* can be ``"bytes"`` (auto-scaled), ``"items"``, or ``None``
     (auto-detect: uses bytes if *total* > 1024, otherwise items).
 
     When *start_time* (a :func:`time.monotonic` timestamp) is provided,
-    the current throughput is appended to the line.
+    the current throughput and estimated time remaining are appended.
+
+    The bar width adapts to the current terminal size.  When the terminal
+    is too narrow, components are progressively dropped (ETA → speed →
+    truncate) rather than being cut mid-text.
     """
     if total <= 0:
         return
@@ -384,31 +401,69 @@ def _progress_bar(
         unit = "bytes" if total > 1024 else "items"
 
     pct = min(current / total, 1.0) * 100
-    width = 40
-    filled = int(width * current // total)
-    bar = "█" * filled + "░" * (width - filled)
+    frac = min(current / total, 1.0)
+    term_width = shutil.get_terminal_size((80, 24)).columns
 
+    # ── speed & ETA ──────────────────────────────────────────────────
     speed = ""
+    eta = ""
     if start_time is not None:
         elapsed = time.monotonic() - start_time
-        if elapsed > 0:
+        if elapsed > 0 and current > 0:
             rate = current / elapsed
             if unit == "bytes":
                 speed = f" {_format_size(rate)}/s"
             else:
                 speed = f" {rate:.1f} {unit}/s"
+            remaining = (total - current) / rate
+            if remaining > 0:
+                eta = f" ETA {_format_eta(remaining)}"
 
+    # ── quantity suffix ──────────────────────────────────────────────
     if unit == "bytes":
         suffix = f"{_format_size(current)}/{_format_size(total)}"
     else:
         suffix = f"{current}/{total} {unit}"
 
+    # ── progressive layout ───────────────────────────────────────────
+    max_width = term_width - 1
+
+    def _bar_budget() -> int:
+        return max_width - (len(label) + 14 + len(suffix) + len(speed) + len(eta))
+
+    bar_width = max(10, min(40, _bar_budget()))
+
+    # If bar at minimum still overflows, drop ETA first.
+    if 10 + len(label) + 14 + len(suffix) + len(speed) + len(eta) > max_width:
+        eta = ""
+        bar_width = max(10, min(40, _bar_budget()))
+
+    # Still overflows → drop speed.
+    if 10 + len(label) + 14 + len(suffix) + len(speed) > max_width:
+        speed = ""
+        bar_width = max(10, min(40, _bar_budget()))
+
+    filled = int(bar_width * frac)
+    bar = "█" * filled + "░" * (bar_width - filled)
+
+    line = f"{label}: |{bar}| {pct:5.1f}% ({suffix}){speed}{eta}"
+
+    # Last resort: hard truncate.
+    if len(line) > max_width:
+        line = line[:max_width]
+
     print(
-        f"\r{label}: |{bar}| {pct:5.1f}% ({suffix}){speed}\033[K",
+        f"\r\033[?25l{line}\033[K",
         end="",
         flush=True,
         file=sys.stderr,
     )
+
+
+def _progress_bar_end() -> None:
+    """Finish a progress-bar sequence: show cursor and print newline."""
+    print("\033[?25h", end="", file=sys.stderr)
+    print(file=sys.stderr)
 
 
 def _log(msg: str) -> None:
@@ -557,7 +612,7 @@ def compress_directories(
         ) from exc
 
     if verbose:
-        print(file=sys.stderr)  # newline after progress bar
+        _progress_bar_end()
 
     return output_filename
 
@@ -655,7 +710,7 @@ def encrypt_file(
                     _progress_bar(processed, total, "Encrypting", start_time=t0)
 
     if verbose:
-        print(file=sys.stderr)
+        _progress_bar_end()
 
     if cleanup:
         os.remove(input_filename)
@@ -766,13 +821,15 @@ def decrypt_file(
                     if verbose:
                         _progress_bar(reader.bytes_read, total, "Decrypting", start_time=t0)
         except Exception:
+            if verbose:
+                _progress_bar_end()
             # Remove partial output on failure
             if os.path.isfile(output_filename):
                 os.remove(output_filename)
             raise
 
     if verbose:
-        print(file=sys.stderr)
+        _progress_bar_end()
 
     if cleanup:
         if os.path.isfile(input_filename):
