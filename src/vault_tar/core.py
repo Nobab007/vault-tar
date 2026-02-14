@@ -961,6 +961,68 @@ def _prompt_password(confirm: bool = False) -> str:
 
 # ── Argument parser ──────────────────────────────────────────────────────────
 
+def _can_colorize_stdout() -> bool:
+    """Check if stdout supports ANSI color codes.
+
+    Mirrors the logic of CPython's ``_colorize.can_colorize()`` so the
+    examples section honours the same environment variables and terminal
+    checks that argparse uses internally.
+    """
+    try:
+        if not sys.flags.ignore_environment:
+            if os.environ.get("PYTHON_COLORS") == "0":
+                return False
+            if os.environ.get("PYTHON_COLORS") == "1":
+                return True
+        if os.environ.get("NO_COLOR"):
+            return False
+        if os.environ.get("FORCE_COLOR"):
+            return True
+        if os.environ.get("TERM") == "dumb":
+            return False
+        if not hasattr(sys.stdout, "fileno"):
+            return False
+        if sys.platform == "win32":
+            try:
+                import nt  # type: ignore[import-not-found]
+                return nt._supports_virtual_terminal()  # type: ignore
+            except (ImportError, AttributeError):
+                return False
+        return os.isatty(sys.stdout.fileno())
+    except Exception:
+        return False
+
+
+def _build_epilog() -> str:
+    """Return the examples epilog, coloured when the terminal supports it."""
+    if _can_colorize_stdout():
+        r  = "\x1b[0m"      # reset
+        h  = "\x1b[1;34m"   # heading      (bold blue)
+        p  = "\x1b[1;35m"   # prog         (bold magenta)
+        a  = "\x1b[1;32m"   # action       (bold green)
+        s  = "\x1b[1;32m"   # short option (bold green)
+        lo = "\x1b[1;36m"   # long option  (bold cyan)
+        v  = "\x1b[1;33m"   # label/value  (bold yellow)
+    else:
+        r = h = p = a = s = lo = v = ""
+
+    return (
+        f"{h}examples:{r}\n"
+        f"  {p}%(prog)s{r} {a}encrypt{r} {s}-i{r} {v}secret_docs/{r}"
+        f" {s}-o{r} {v}encrypted{r} {s}-v{r}\n"
+        f"  {p}%(prog)s{r} {a}encrypt{r} {s}-i{r} {v}data.bin{r}"
+        f" {s}-o{r} {v}data.enc{r} {lo}--file-only{r} {lo}--no-split{r}\n"
+        f"  {p}%(prog)s{r} {a}encrypt{r} {s}-i{r} {v}photos/{r}"
+        f" {s}-o{r} {v}photos{r} {lo}--algorithm{r} {v}zst{r} {s}-v{r}\n"
+        f"  {p}%(prog)s{r} {a}decrypt{r} {s}-i{r} {v}encrypted{r}"
+        f" {s}-o{r} {v}restored/{r} {s}-v{r}\n"
+        f"  {p}%(prog)s{r} {a}decrypt{r} {s}-i{r} {v}data.enc{r}"
+        f" {s}-o{r} {v}data.bin{r} {lo}--file-only{r}\n"
+        f"  {p}%(prog)s{r} {a}compare{r} {v}original/{r}"
+        f" {v}restored/{r} {s}-v{r}\n"
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Construct the CLI argument parser."""
 
@@ -982,15 +1044,7 @@ def build_parser() -> argparse.ArgumentParser:
             "with PBKDF2-HMAC-SHA256 key derivation."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=(
-            "examples:\n"
-            "  %(prog)s encrypt -i secret_docs/ -o encrypted -v\n"
-            "  %(prog)s encrypt -i data.bin -o data.enc --file-only --no-split\n"
-            "  %(prog)s encrypt -i photos/ -o photos --algorithm zst -v\n"
-            "  %(prog)s decrypt -i encrypted -o restored/ -v\n"
-            "  %(prog)s decrypt -i data.enc -o data.bin --file-only\n"
-            "  %(prog)s compare original/ restored/ -v\n"
-        ),
+        epilog=_build_epilog(),
     )
     parser.add_argument(
         "-V",
